@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日期區間薪資計算器</title>
+    <style>
+        /* 保持樣式不變 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 480px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="date"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result-group {
+            margin-top: 25px;
+            border-top: 2px solid #ccc;
+            padding-top: 20px;
+        }
+        .total-salary-box {
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 2px solid #28a745;
+            border-radius: 4px;
+            background-color: #e2f0e8;
+            font-size: 1.1em;
+            color: #155724;
+            text-align: center;
+        }
+        .foreign-payout-box {
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 2px solid #6c757d; 
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            font-size: 1.1em;
+            color: #343a40;
+            text-align: center;
+        }
+        .balance-box {
+            padding: 15px;
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            background-color: #e6f7ff;
+            font-size: 1.2em;
+            color: #0056b3;
+            font-weight: bold;
+            text-align: center;
+        }
+        .error {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #dc3545;
+            background-color: #f8d7da;
+            color: #721c24;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        .note {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>💰 薪資計算器</h1>
+    <div class="note">
+        計算邏輯：包含「開始日期」，不包含「結束日期」。所有金額採四捨五入取整數。
+    </div>
+
+    <label for="startDate">開始日期：</label>
+    <input type="date" id="startDate"> <label for="endDate">結束日期：</label>
+    <input type="date" id="endDate"> <label for="totalDailySalary">總每日薪資 (含外勞，元)：</label>
+    <input type="number" id="totalDailySalary" min="0" value="1200">
+
+    <label for="foreignWorkerDailySalary">外勞每日薪資 (元)：</label>
+    <input type="number" id="foreignWorkerDailySalary" min="0" value="1000">
+
+    <button onclick="calculateSalary()">計算結果</button>
+
+    <div class="result-group">
+        <div class="total-salary-box" id="totalSalaryResult">
+            總天數：0 天 | 總薪資：0 元
+        </div>
+        <div class="foreign-payout-box" id="foreignPayoutResult">
+            支付外勞總額：0 元
+        </div>
+        <div class="balance-box" id="companyBalanceResult">
+            公司結餘：0 元
+        </div>
+    </div>
+
+    <div class="error" id="errorMessage">
+        </div>
+</div>
+
+<script>
+    // 定義結果的預設 HTML 內容，方便重設
+    const DEFAULT_RESULT_TOTAL = "總天數：0 天 | 總薪資：0 元";
+    const DEFAULT_RESULT_PAYOUT = "支付外勞總額：0 元";
+    const DEFAULT_RESULT_BALANCE = "公司結餘：0 元";
+
+    // 輔助函數：重設所有結果和錯誤訊息
+    function resetResults() {
+        document.getElementById('totalSalaryResult').innerHTML = DEFAULT_RESULT_TOTAL;
+        document.getElementById('foreignPayoutResult').innerHTML = DEFAULT_RESULT_PAYOUT;
+        document.getElementById('companyBalanceResult').innerHTML = DEFAULT_RESULT_BALANCE;
+        document.getElementById('errorMessage').style.display = 'none';
+    }
+
+    function displayError(message) {
+        document.getElementById('errorMessage').innerHTML = message;
+        document.getElementById('errorMessage').style.display = 'block';
+    }
+
+    function calculateSalary() {
+        try {
+            // 重設上一次的結果
+            resetResults();
+
+            // 1. 取得輸入值
+            const startDateInput = document.getElementById('startDate').value;
+            const endDateInput = document.getElementById('endDate').value;
+            const totalDailySalaryInput = document.getElementById('totalDailySalary').value;
+            const foreignWorkerDailySalaryInput = document.getElementById('foreignWorkerDailySalary').value;
+
+            // 取得 DOM 元素
+            const totalSalaryDiv = document.getElementById('totalSalaryResult');
+            const foreignPayoutDiv = document.getElementById('foreignPayoutResult');
+            const balanceDiv = document.getElementById('companyBalanceResult');
+
+            // 2. 嚴謹的輸入值檢查
+            if (!startDateInput || !endDateInput) {
+                displayError("請選擇開始日期和結束日期。");
+                return;
+            }
+
+            const totalDailySalary = parseFloat(totalDailySalaryInput);
+            const foreignWorkerDailySalary = parseFloat(foreignWorkerDailySalaryInput);
+
+            // 檢查數字是否為有效、非負數 (DEBUG 關鍵點 A: 使用 isFinite 檢查是否為合法數字)
+            if (!Number.isFinite(totalDailySalary) || totalDailySalary < 0 || !Number.isFinite(foreignWorkerDailySalary) || foreignWorkerDailySalary < 0) {
+                displayError("每日薪資必須是有效的非負數字。請檢查輸入。");
+                return;
+            }
+            
+            // 3. 日期物件處理與檢查
+            const startDate = new Date(startDateInput);
+            const endDate = new Date(endDateInput);
+
+            // 檢查日期轉換是否成功 (DEBUG 關鍵點 B: 確保日期有效)
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                displayError("輸入的日期格式無效。請確保日期選擇正確。");
+                return;
+            }
+            
+            // 標準化日期時間 (避免時區問題導致天數計算錯誤)
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+
+            // 4. 日期邏輯驗證
+            if (startDate >= endDate) {
+                displayError("結束日期必須晚於開始日期，否則工作天數為 0。");
+                return;
+            }
+            
+            // 5. 計算天數 (不包含終止日)
+            const oneDay = 1000 * 60 * 60 * 24; 
+            const differenceMs = endDate.getTime() - startDate.getTime();
+            // Math.round 用於解決可能的夏令時等微小時間差異問題
+            const totalDays = Math.round(differenceMs / oneDay);
+            
+            // 6. 計算總薪資與結餘
+            
+            // 原始金額計算 (避免在計算中間進行四捨五入導致誤差)
+            const rawTotalSalary = totalDays * totalDailySalary;
+            const rawForeignWorkerPayout = totalDays * foreignWorkerDailySalary;
+            const rawCompanyBalance = rawTotalSalary - rawForeignWorkerPayout;
+
+            // 最終金額四捨五入取整數
+            const totalSalary = Math.round(rawTotalSalary);
+            const foreignWorkerPayout = Math.round(rawForeignWorkerPayout);
+            const companyBalance = Math.round(rawCompanyBalance);
+
+            // 7. 顯示結果
+            totalSalaryDiv.innerHTML = `
+                總天數：<strong>${totalDays}</strong> 天 | 總薪資：<strong>${totalSalary.toLocaleString()}</strong> 元
+            `;
+            
+            foreignPayoutDiv.innerHTML = `
+                支付外勞總額：<strong>${foreignWorkerPayout.toLocaleString()}</strong> 元
+            `;
+            
+            balanceDiv.innerHTML = `
+                公司結餘：<strong>${companyBalance.toLocaleString()}</strong> 元
+            `;
+            
+        } catch (error) {
+            // 捕捉任何未預料到的錯誤，並顯示在錯誤框中
+            console.error("計算發生未知錯誤:", error);
+            displayError("發生未知錯誤，請檢查您的輸入並重新嘗試。詳細錯誤已記錄在瀏覽器控制台。");
+        }
+    }
+</script>
+
+</body>
+</html>
